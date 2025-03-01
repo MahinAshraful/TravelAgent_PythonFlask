@@ -25,6 +25,11 @@ def search_airbnb():
     sw_long = float(request.args.get("sw_long", -74.0005))
     zoom_value = int(request.args.get("zoom", 2))
 
+    #optional private_room or entire home
+    #change the default to empty string if no preference
+    category = request.args.get("category", 'private_room')
+
+
     if not check_in or not check_out:
         return jsonify({"error": "Missing check-in or check-out dates"}), 400
 
@@ -32,13 +37,25 @@ def search_airbnb():
         search_results = pyairbnb.search_all(check_in, check_out, ne_lat, ne_long, sw_lat, sw_long, zoom_value, currency, "")
 
         # Filter results: only keep listings with rating >= 4.3
-        filtered_results = [listing for listing in search_results if float(listing.get("rating", {}).get("value", 0)) >= 4.5]
+        filtered_results = [listing for listing in search_results if float(listing.get("rating", {}).get("value", 0)) >= 4.5 and (category == '' or listing.get("category") == category)]
 
         return jsonify(filtered_results)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/reviews', methods=['GET'])
+def get_reviews():
+    # Get listing URL and proxy URL
+    room_url = request.args.get("room_url", "https://www.airbnb.com/rooms/30931885")
+    proxy_url = request.args.get("proxy_url", "")
+
+    try:
+        reviews_data = pyairbnb.get_reviews(room_url, proxy_url)
+        comments = [review.get("comments", "") for review in reviews_data]
+        return jsonify(comments)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 
