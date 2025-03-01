@@ -44,6 +44,18 @@ def search_airbnb():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/reviews', methods=['GET'])
+def get_reviews():
+    # Get listing URL and proxy URL
+    room_url = request.args.get("room_url", "https://www.airbnb.com/rooms/30931885")
+    proxy_url = request.args.get("proxy_url", "")
+
+    try:
+        reviews_data = pyairbnb.get_reviews(room_url, proxy_url)
+        comments = [review.get("comments", "") for review in reviews_data]
+        return jsonify(comments)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 
