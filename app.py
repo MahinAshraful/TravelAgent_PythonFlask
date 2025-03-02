@@ -74,7 +74,6 @@ def search_airbnb():
 
 
 #AI STUFF
-# Corrected Groq API implementation
 # Claude API Implementation
 import requests
 import json
