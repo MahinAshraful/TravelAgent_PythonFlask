@@ -1,65 +1,84 @@
-from flask import Flask, jsonify, request
-import pyairbnb
+# from flask import Flask, jsonify, request
+# from flask_cors import CORS
+# import pyairbnb
 
-scrap = Flask(__name__)
-
-@scrap.route('/search', methods=['GET'])
-def search_airbnb():
-    # Get search parameters from query string
-    check_in = request.args.get("check_in", '2025-06-01')
-    check_out = request.args.get("check_out", '2025-06-04')
-    currency = request.args.get("currency", "USD")
-
-    # Get optional coordinates from request, else default to New York
-    ne_lat = float(request.args.get("ne_lat", 40.7808))
-    ne_long = float(request.args.get("ne_long", -73.9653))
-    sw_lat = float(request.args.get("sw_lat", 40.7308))
-    sw_long = float(request.args.get("sw_long", -74.0005))
-    zoom_value = int(request.args.get("zoom", 2))
-
-    if not check_in or not check_out:
-        return jsonify({"error": "Missing check-in or check-out dates"}), 400
-
-    try:
-        search_results = pyairbnb.search_all(check_in, check_out, ne_lat, ne_long, sw_lat, sw_long, zoom_value, currency, "")
-
-        # Filter results: only keep listings with rating >= 4.3
-        filtered_results = [listing for listing in search_results if float(listing.get("rating", {}).get("value", 0)) >= 4.5]
-
-        return jsonify(filtered_results)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+# app = Flask(__name__)
+# CORS(app)
 
 
-# @scrap.route('/scrape', methods=['GET'])
-# def scrape_airbnb():
-#     # Get listing URL and dates from query string
-#     room_url = request.args.get("room_url", "https://www.airbnb.com/rooms/1244159884004281532")
+# @app.route("/")
+# def hello_world():
+#     return jsonify({"message": "Hello Mahin 2"})
+
+# #SEARCH AND FILTER THE JSON 
+# @app.route('/search', methods=['GET'])
+# def search_airbnb():
+#     # Get search parameters from query string
 #     check_in = request.args.get("check_in", '2025-06-01')
 #     check_out = request.args.get("check_out", '2025-06-04')
 #     currency = request.args.get("currency", "USD")
 
-#     if not room_url or not check_in or not check_out:
-#         return jsonify({"error": "Missing required parameters: room_url, check_in, or check_out"}), 400
+#     # Get optional coordinates from request, else default to New York
+#     ne_lat = float(request.args.get("ne_lat", 40.7808))
+#     ne_long = float(request.args.get("ne_long", -73.9653))
+#     sw_lat = float(request.args.get("sw_lat", 40.7308))
+#     sw_long = float(request.args.get("sw_long", -74.0005))
+#     zoom_value = int(request.args.get("zoom", 2))
 
-#     proxy_url = ""
+#     #optional private_room or entire home
+#     #change the default to empty string if no preference
+#     category = request.args.get("category", '')
+
+
+#     if not check_in or not check_out:
+#         return jsonify({"error": "Missing check-in or check-out dates"}), 400
 
 #     try:
-#         # Get metadata and price information
-#         data, price_input, cookies = pyairbnb.get_metadata_from_url(room_url, proxy_url)
-#         product_id = price_input["product_id"]
-#         api_key = price_input["api_key"]
+#         search_results = pyairbnb.search_all(check_in, check_out, ne_lat, ne_long, sw_lat, sw_long, zoom_value, currency, "")
 
-#         # Fetch price details dynamically
-#         price_data = pyairbnb.get_price(
-#             product_id, price_input["impression_id"], api_key, currency, cookies, check_in, check_out, proxy_url
-#         )
+#         # Filter results: only keep listings with rating >= 4.3
+#         filtered_results = [listing for listing in search_results if float(listing.get("rating", {}).get("value", 0)) >= 4.5 and (category == '' or listing.get("category") == category)]
 
-#         return jsonify(price_data)
-
+#         return jsonify(filtered_results)
+    
 #     except Exception as e:
 #         return jsonify({"error": str(e)}), 500
 
 
-if __name__ == "__main__":
-    scrap.run(debug=True)
+# #GET THE COMMENTS in reviews and put it in the list
+# @app.route('/reviews', methods=['GET'])
+# def get_reviews():
+#     # Get listing URL and proxy URL
+#     room_url = request.args.get("room_url", "https://www.airbnb.com/rooms/30931885")
+#     proxy_url = request.args.get("proxy_url", "")
+
+#     try:
+#         reviews_data = pyairbnb.get_reviews(room_url, proxy_url)
+#         comments = [review.get("comments", "") for review in reviews_data]
+
+#         return jsonify(comments)
+    
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
+
+
+
+# #GET THE PICTURE URLS OF THE LISTINGS
+# @app.route('/images', methods=['GET'])
+# def get_images():
+#     # Get listing URL and proxy URL
+#     room_url = request.args.get("room_url", "https://www.airbnb.com/rooms/30931885")
+#     proxy_url = request.args.get("proxy_url", "")
+
+#     try:
+#         images_data = pyairbnb.get_images(room_url, proxy_url)
+#         image_urls = [image.get("url", "") for image in images_data]
+
+#         return jsonify(image_urls)
+    
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
+
+
+# if __name__ == "__main__":
+#     app.run(debug=True, host="0.0.0.0", port=5001)
