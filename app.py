@@ -560,7 +560,7 @@ def ai_flight_search():
     - Tokyo: NRT
     - Dubai: DXB
     
-    For dates specified as "next week", "next month", etc., calculate the actual dates based on today's date (consider today is the date this request is being processed).
+    For dates specified as "next week", "next month", etc., calculate the actual dates based on today's date (it is 03/02/2025).
     """
 
     # Construct the prompt that will be sent to Claude
