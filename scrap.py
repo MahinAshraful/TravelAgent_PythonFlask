@@ -63,22 +63,85 @@
 
 
 
-# #GET THE PICTURE URLS OF THE LISTINGS
-# @app.route('/images', methods=['GET'])
-# def get_images():
+
+# import requests
+
+# CLAUDE_API_KEY = ''  # Replace with your API key
+# CLAUDE_API_URL = 'https://api.groq.ai/v1/process'  # Replace with the actual API URL for Claude
+
+# def analyze_sentiment_with_claude(review_text):
+#     prompt = f"Analyze the sentiment of the following review. Tell me if it's positive, neutral, or negative: {review_text}"
+    
+#     response = requests.post(
+#         CLAUDE_API_URL,
+#         headers={'Authorization': f'Bearer {CLAUDE_API_KEY}'},
+#         json={'prompt': prompt, 'max_tokens': 100}
+#     )
+    
+#     sentiment = response.json().get('text', '').strip()
+#     return sentiment
+
+
+
+# def extract_keywords_with_claude(review_text):
+#     prompt = f"Extract the most important keywords related to cleanliness, location, comfort, etc., from the following review: {review_text}"
+    
+#     response = requests.post(
+#         CLAUDE_API_URL,
+#         headers={'Authorization': f'Bearer {CLAUDE_API_KEY}'},
+#         json={'prompt': prompt, 'max_tokens': 100}
+#     )
+    
+#     keywords = response.json().get('text', '').strip()
+#     return keywords.split(",")  # Assuming the keywords are returned in comma-separated format
+
+
+
+
+# @app.route('/reviews', methods=['GET'])
+# def get_reviews():
 #     # Get listing URL and proxy URL
 #     room_url = request.args.get("room_url", "https://www.airbnb.com/rooms/30931885")
 #     proxy_url = request.args.get("proxy_url", "")
 
 #     try:
-#         images_data = pyairbnb.get_images(room_url, proxy_url)
-#         image_urls = [image.get("url", "") for image in images_data]
+#         reviews_data = pyairbnb.get_reviews(room_url, proxy_url)
+#         comments = [review.get("comments", "") for review in reviews_data]
+        
+#         # Analyze sentiment and extract keywords for each review using Claude
+#         results = []
+#         for comment in comments:
+#             sentiment = analyze_sentiment_with_claude(comment)  # Sentiment analysis with Claude
+#             keywords = extract_keywords_with_claude(comment)  # Keyword extraction with Claude
+#             results.append({
+#                 "comment": comment,
+#                 "sentiment": sentiment,
+#                 "keywords": keywords
+#             })
 
-#         return jsonify(image_urls)
+#         return jsonify(results)
     
 #     except Exception as e:
 #         return jsonify({"error": str(e)}), 500
 
+# def rank_listings(listings, reviews, user_keywords):
+#     ranked_listings = []
+
+#     for listing in listings:
+#         review = reviews.get(listing["id"])  # Get reviews for the listing
+#         if review:
+#             sentiment = analyze_sentiment_with_claude(review)
+#             keywords = extract_keywords_with_claude(review)
+
+#             sentiment_score = 1 if sentiment == "positive" else -1 if sentiment == "negative" else 0
+#             # Compare keywords with user preferences (user_keywords is a list of keywords they care about)
+#             matched_keywords = [kw for kw in keywords if kw in user_keywords]
+#             score = len(matched_keywords) + sentiment_score  # A basic score combining sentiment and keyword relevance
+#             ranked_listings.append({"listing_id": listing["id"], "score": score})
+
+#     # Sort listings by score (higher score = better match)
+#     ranked_listings = sorted(ranked_listings, key=lambda x: x["score"], reverse=True)
+#     return ranked_listings[:5]  # Top 5 listings
 
 # if __name__ == "__main__":
 #     app.run(debug=True, host="0.0.0.0", port=5001)
