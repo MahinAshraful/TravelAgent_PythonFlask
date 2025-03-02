@@ -571,5 +571,175 @@ def search_flights():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+@app.route("/api/ai_flight_search", methods=["POST"])
+def ai_flight_search():
+    # Get natural language query from request
+    data = request.json
+    query = data.get("query")
+
+    if not query:
+        return jsonify({"error": "Missing query parameter"}), 400
+
+    if not CLAUDE_API_KEY:
+        return jsonify({"error": "Missing API key configuration"}), 500
+
+    # Set up Claude API request
+    headers = {
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+        "x-api-key": CLAUDE_API_KEY,
+    }
+
+    # System prompt to guide Claude's extraction
+    system_prompt = """
+    Extract flight search parameters from the user's natural language query.
+    Return a JSON object with the following fields (all lowercase):
+    - leaving_airport: Airport code (3 letters, e.g., "JFK")
+    - destination_airport: Airport code (3 letters, e.g., "LAX")
+    - departure_date: In YYYY-MM-DD format
+    - return_date: In YYYY-MM-DD format
+    - num_adults: Integer (default to 1 if not specified)
+    - num_seniors: Integer (default to 0 if not specified)
+    - num_students: Integer (default to 0 if not specified)
+    - children_ages: Array of integers representing ages 2-17 (default to empty array if not specified)
+    - infants_on_seat: Integer (default to 0 if not specified)
+    - infants_on_lap: Integer (default to 0 if not specified)
+    
+    If information is missing or unclear, make a reasonable assumption based on the query context.
+    Only return the JSON object with no additional text.
+    
+    If the user provides city names instead of airport codes, use these common mappings:
+    - New York: JFK (or LGA or EWR if context suggests)
+    - Los Angeles: LAX
+    - Chicago: ORD
+    - London: LHR
+    - Paris: CDG
+    - Istanbul: IST
+    - Miami: MIA
+    - San Francisco: SFO
+    - Tokyo: NRT
+    - Dubai: DXB
+    
+    For dates specified as "next week", "next month", etc., calculate the actual dates based on today's date (consider today is the date this request is being processed).
+    """
+
+    # Construct the prompt that will be sent to Claude
+    claude_payload = {
+        "model": "claude-3-7-sonnet-20250219",
+        "max_tokens": 500,
+        "temperature": 0,
+        "system": system_prompt,
+        "messages": [
+            {
+                "role": "user",
+                "content": f"Extract flight search parameters from this query: {query}",
+            }
+        ],
+    }
+
+    try:
+        # Make request to Claude API
+        response = requests.post(CLAUDE_API_URL, headers=headers, json=claude_payload)
+
+        if response.status_code != 200:
+            print(f"Claude API error: {response.text}")
+            return (
+                jsonify({"error": f"AI processing error: {response.status_code}"}),
+                500,
+            )
+
+        # Parse Claude's response
+        result = response.json()
+
+        if "content" not in result or len(result["content"]) == 0:
+            return jsonify({"error": "Empty response from AI"}), 500
+
+        # Extract JSON content from Claude's response
+        ai_response = result["content"][0]["text"].strip()
+        print(f"Claude extracted parameters: {ai_response}")
+
+        try:
+            # Parse the JSON content
+            flight_params = json.loads(ai_response)
+
+            # Validate required fields
+            required_fields = [
+                "leaving_airport",
+                "destination_airport",
+                "departure_date",
+                "return_date",
+            ]
+            missing_fields = [
+                field for field in required_fields if field not in flight_params
+            ]
+
+            if missing_fields:
+                return (
+                    jsonify(
+                        {
+                            "error": f"Missing required parameters: {', '.join(missing_fields)}"
+                        }
+                    ),
+                    400,
+                )
+
+            # Now use the extracted parameters to call the flight search
+            if "children_ages" not in flight_params:
+                flight_params["children_ages"] = []
+
+            # Set defaults
+            flight_params.setdefault("num_adults", 1)
+            flight_params.setdefault("num_seniors", 0)
+            flight_params.setdefault("num_students", 0)
+            flight_params.setdefault("infants_on_seat", 0)
+            flight_params.setdefault("infants_on_lap", 0)
+
+            # Convert airport codes to uppercase
+            flight_params["leaving_airport"] = flight_params["leaving_airport"].upper()
+            flight_params["destination_airport"] = flight_params[
+                "destination_airport"
+            ].upper()
+
+            # Call the scraper function
+            result = scrape_momondo(
+                leaving_airport=flight_params["leaving_airport"],
+                destination_airport=flight_params["destination_airport"],
+                departure_date=flight_params["departure_date"],
+                return_date=flight_params["return_date"],
+                num_adults=flight_params["num_adults"],
+                num_seniors=flight_params["num_seniors"],
+                num_students=flight_params["num_students"],
+                children_ages=flight_params["children_ages"],
+                infants_on_seat=flight_params["infants_on_seat"],
+                infants_on_lap=flight_params["infants_on_lap"],
+            )
+
+            if result:
+                return jsonify(
+                    {
+                        "success": True,
+                        "booking_url": result,
+                        "extracted_params": flight_params,
+                    }
+                )
+            else:
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "message": "No booking links found",
+                            "extracted_params": flight_params,
+                        }
+                    ),
+                    404,
+                )
+
+        except json.JSONDecodeError:
+            return jsonify({"error": "Failed to parse AI response"}), 500
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5001)
