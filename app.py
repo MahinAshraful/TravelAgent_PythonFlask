@@ -266,66 +266,6 @@ def get_reviews():
         return jsonify({"error": str(e)}), 500
 
 
-# # Test route to verify API connection
-# @app.route('/test-claude-api', methods=['GET'])
-# def test_claude_api():
-#     test_review = "The location was perfect, close to the beach and restaurants. The apartment was clean and the host was very friendly and responsive."
-
-#     try:
-#         # Test API key
-#         if not CLAUDE_API_KEY:
-#             return jsonify({
-#                 "error": "API key not found",
-#                 "help": "Make sure you have an .env file with API_KEY set correctly"
-#             }), 400
-
-#         # Test API directly with minimal request
-#         headers = {
-#             'anthropic-version': '2023-06-01',
-#             'content-type': 'application/json',
-#             'x-api-key': CLAUDE_API_KEY
-#         }
-
-#         simple_payload = {
-#             "model": "claude-3-7-sonnet-20250219",
-#             "max_tokens": 10,
-#             "messages": [
-#                 {
-#                     "role": "user",
-#                     "content": "Say hello"
-#                 }
-#             ]
-#         }
-
-#         test_response = requests.post(CLAUDE_API_URL, headers=headers, json=simple_payload)
-
-#         if test_response.status_code != 200:
-#             return jsonify({
-#                 "error": f"API test failed with status {test_response.status_code}",
-#                 "details": test_response.text,
-#                 "api_key_format": f"{CLAUDE_API_KEY[:5]}...{CLAUDE_API_KEY[-5:]}" if CLAUDE_API_KEY else None
-#             }), 400
-
-#         # Test sentiment and keywords
-#         sentiment = analyze_sentiment_with_claude(test_review)
-#         keywords = extract_keywords_with_claude(test_review)
-
-#         return jsonify({
-#             "status": "success",
-#             "test_review": test_review,
-#             "sentiment_result": sentiment,
-#             "keywords_result": keywords,
-#             "api_key_loaded": bool(CLAUDE_API_KEY),
-#             "api_key_format": f"{CLAUDE_API_KEY[:5]}...{CLAUDE_API_KEY[-5:]}" if CLAUDE_API_KEY else None
-#         })
-
-#     except Exception as e:
-#         return jsonify({
-#             "error": str(e),
-#             "trace": traceback.format_exc()
-#         }), 500
-
-
 # Updated recommend_listings function to use Claude API
 @app.route("/recommend", methods=["GET"])
 def recommend_listings():
