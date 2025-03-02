@@ -73,101 +73,141 @@ def search_airbnb():
         return jsonify({"error": str(e)}), 500
 
 
-#GET THE COMMENTS in reviews and put it in the list
-# @app.route('/reviews', methods=['GET'])
-# def get_reviews():
-#     # Get listing URL and proxy URL
-#     room_url = request.args.get("room_url", "https://www.airbnb.com/rooms/1244159884004281532")
-#     proxy_url = request.args.get("proxy_url", "")
-
-#     try:
-#         reviews_data = pyairbnb.get_reviews(room_url, proxy_url)
-#         comments = [review.get("comments", "") for review in reviews_data]
-
-#         return jsonify(comments)
-    
-#     except Exception as e:
-#         return jsonify({"error": str(e)}), 500
-
-
-
 #AI STUFF
 # Corrected Groq API implementation
+# Claude API Implementation
 import requests
+import json
+# Fixed Claude API implementation with accurate request format
+import os
+import requests
+import traceback
+from flask import jsonify
+from dotenv import load_dotenv
 
-GROQ_API_KEY = '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'  # Replace with your Groq API key
-GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions'
+# Load environment variables
+load_dotenv()
 
+# Get API key from environment variables
+CLAUDE_API_KEY = os.getenv("API_KEY")
 
+# Claude API configuration - Note the updated URL and headers
+CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages'
 
-def analyze_sentiment_with_groq(review_text):
+def analyze_sentiment_with_claude(review_text):
+    if not CLAUDE_API_KEY:
+        print("API Key is missing. Please check your .env file.")
+        return "NEUTRAL"
+    
+    # Updated headers to match the correct format for Claude API
     headers = {
-        'Authorization': f'Bearer {GROQ_API_KEY}',
-        'Content-Type': 'application/json'
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+        'x-api-key': CLAUDE_API_KEY
     }
     
+    # Corrected payload structure for Claude API
     payload = {
-        "model": "llama3-70b-8192",  # Or another model Groq supports
+        "model": "claude-3-7-sonnet-20250219",
+        "max_tokens": 10,
         "messages": [
-            {"role": "system", "content": "You are a sentiment analysis assistant. Classify the sentiment as POSITIVE, NEGATIVE, or NEUTRAL. Reply with just one word."},
-            {"role": "user", "content": f"Analyze the sentiment of this review: {review_text}"}
+            {
+                "role": "user",
+                "content": f"Analyze the sentiment of this Airbnb review. Respond with exactly one word - either POSITIVE, NEGATIVE, or NEUTRAL: \"{review_text}\""
+            }
         ],
-        "temperature": 0.1,
-        "max_tokens": 10
+        "temperature": 0
     }
     
     try:
-        response = requests.post(GROQ_API_URL, headers=headers, json=payload)
-        response.raise_for_status()  # Raise an exception for HTTP errors
-        result = response.json()
-        sentiment = result.get('choices', [{}])[0].get('message', {}).get('content', '').strip().upper()
+        # Print request details for debugging
+        print(f"Sending request to Claude API with headers: {headers.keys()}")
+        print(f"Payload: {payload}")
         
-        # Normalize the response to ensure it's one of our expected values
-        if 'POSITIVE' in sentiment:
-            return 'POSITIVE'
-        elif 'NEGATIVE' in sentiment:
-            return 'NEGATIVE'
+        response = requests.post(CLAUDE_API_URL, headers=headers, json=payload)
+        
+        # Print response for debugging
+        print(f"Response status: {response.status_code}")
+        print(f"Response text: {response.text[:200]}")
+        
+        if response.status_code != 200:
+            print(f"Error response: {response.text}")
+            return "NEUTRAL"
+            
+        result = response.json()
+        print(f"JSON response keys: {result.keys()}")
+        
+        # Extract the content from the response
+        if 'content' in result and len(result['content']) > 0:
+            sentiment = result['content'][0].get('text', '').strip().upper()
+            
+            # Normalize the response
+            if 'POSITIVE' in sentiment:
+                return 'POSITIVE'
+            elif 'NEGATIVE' in sentiment:
+                return 'NEGATIVE'
+            else:
+                return 'NEUTRAL'
         else:
+            print("No content found in response")
             return 'NEUTRAL'
+            
     except Exception as e:
-        print(f"Error in sentiment analysis: {str(e)}")
+        print(f"Error in Claude sentiment analysis: {str(e)}")
         return 'NEUTRAL'  # Default to neutral if there's an error
 
-
-
-
-def extract_keywords_with_groq(review_text):
+def extract_keywords_with_claude(review_text):
+    if not CLAUDE_API_KEY:
+        print("API Key is missing. Please check your .env file.")
+        return []
+    
+    # Updated headers for Claude API
     headers = {
-        'Authorization': f'Bearer {GROQ_API_KEY}',
-        'Content-Type': 'application/json'
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+        'x-api-key': CLAUDE_API_KEY
     }
     
+    # Corrected payload for Claude API
     payload = {
-        "model": "llama3-70b-8192",  # Or another model Groq supports
+        "model": "claude-3-7-sonnet-20250219",
+        "max_tokens": 100,
         "messages": [
-            {"role": "system", "content": "Extract at most 5 important keywords from the review. Respond with just the keywords separated by commas, no additional text. Think of things people want to hear about a listing when going on a trip."},
-            {"role": "user", "content": review_text}
+            {
+                "role": "user",
+                "content": f"Extract 3-5 keywords from this Airbnb review about the location, amenities, or experience. Return ONLY the keywords separated by commas with no other text or explanation: \"{review_text}\""
+            }
         ],
-        "temperature": 0.1,
-        "max_tokens": 50
+        "temperature": 0
     }
     
     try:
-        response = requests.post(GROQ_API_URL, headers=headers, json=payload)
-        response.raise_for_status()
-        result = response.json()
-        keywords_text = result.get('choices', [{}])[0].get('message', {}).get('content', '').strip()
+        response = requests.post(CLAUDE_API_URL, headers=headers, json=payload)
         
-        # Clean up and split the keywords
-        keywords = [kw.strip() for kw in keywords_text.split(',') if kw.strip()]
-        return keywords
+        if response.status_code != 200:
+            print(f"Error in keyword extraction: {response.status_code} - {response.text}")
+            return []
+            
+        result = response.json()
+        
+        # Extract content from response
+        if 'content' in result and len(result['content']) > 0:
+            keywords_text = result['content'][0].get('text', '').strip()
+            
+            # Clean up and split the keywords
+            keywords = [kw.strip() for kw in keywords_text.split(',') if kw.strip()]
+            return keywords
+        else:
+            print("No content found in response")
+            return []
+            
     except Exception as e:
-        print(f"Error in keyword extraction: {str(e)}")
+        print(f"Error in Claude keyword extraction: {str(e)}")
         return []  # Return empty list on error
 
 
 
-
+# Updated version with better debugging
 @app.route('/reviews', methods=['GET'])
 def get_reviews():
     # Get listing URL and proxy URL
@@ -184,8 +224,23 @@ def get_reviews():
         for review in reviews_to_process:
             comment = review.get("comments", "")
             if comment:
-                sentiment = analyze_sentiment_with_groq(comment)
-                keywords = extract_keywords_with_groq(comment)
+                # Add debugging
+                print(f"Processing review: {comment[:50]}...")
+                
+                try:
+                    sentiment = analyze_sentiment_with_claude(comment)
+                    print(f"Sentiment result: {sentiment}")
+                except Exception as e:
+                    print(f"Sentiment analysis failed: {str(e)}")
+                    sentiment = "NEUTRAL"
+                
+                try:
+                    keywords = extract_keywords_with_claude(comment)
+                    print(f"Keywords result: {keywords}")
+                except Exception as e:
+                    print(f"Keyword extraction failed: {str(e)}")
+                    keywords = []
+                
                 results.append({
                     "comment": comment,
                     "sentiment": sentiment,
@@ -198,26 +253,67 @@ def get_reviews():
         print(f"Error in get_reviews: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
-# def rank_listings(listings, reviews, user_keywords):
-#     ranked_listings = []
 
-#     for listing in listings:
-#         review = reviews.get(listing["id"])  # Get reviews for the listing
-#         if review:
-#             sentiment = analyze_sentiment_with_groq(review)
-#             keywords = extract_keywords_with_groq(review)
+# # Test route to verify API connection
+# @app.route('/test-claude-api', methods=['GET'])
+# def test_claude_api():
+#     test_review = "The location was perfect, close to the beach and restaurants. The apartment was clean and the host was very friendly and responsive."
+    
+#     try:
+#         # Test API key
+#         if not CLAUDE_API_KEY:
+#             return jsonify({
+#                 "error": "API key not found",
+#                 "help": "Make sure you have an .env file with API_KEY set correctly"
+#             }), 400
+            
+#         # Test API directly with minimal request
+#         headers = {
+#             'anthropic-version': '2023-06-01',
+#             'content-type': 'application/json',
+#             'x-api-key': CLAUDE_API_KEY
+#         }
+        
+#         simple_payload = {
+#             "model": "claude-3-7-sonnet-20250219",
+#             "max_tokens": 10,
+#             "messages": [
+#                 {
+#                     "role": "user",
+#                     "content": "Say hello"
+#                 }
+#             ]
+#         }
+        
+#         test_response = requests.post(CLAUDE_API_URL, headers=headers, json=simple_payload)
+        
+#         if test_response.status_code != 200:
+#             return jsonify({
+#                 "error": f"API test failed with status {test_response.status_code}",
+#                 "details": test_response.text,
+#                 "api_key_format": f"{CLAUDE_API_KEY[:5]}...{CLAUDE_API_KEY[-5:]}" if CLAUDE_API_KEY else None
+#             }), 400
+            
+#         # Test sentiment and keywords
+#         sentiment = analyze_sentiment_with_claude(test_review)
+#         keywords = extract_keywords_with_claude(test_review)
+        
+#         return jsonify({
+#             "status": "success",
+#             "test_review": test_review,
+#             "sentiment_result": sentiment,
+#             "keywords_result": keywords,
+#             "api_key_loaded": bool(CLAUDE_API_KEY),
+#             "api_key_format": f"{CLAUDE_API_KEY[:5]}...{CLAUDE_API_KEY[-5:]}" if CLAUDE_API_KEY else None
+#         })
+        
+#     except Exception as e:
+#         return jsonify({
+#             "error": str(e),
+#             "trace": traceback.format_exc()
+#         }), 500
 
-#             sentiment_score = 1 if sentiment == "positive" else -1 if sentiment == "negative" else 0
-#             # Compare keywords with user preferences (user_keywords is a list of keywords they care about)
-#             matched_keywords = [kw for kw in keywords if kw in user_keywords]
-#             score = len(matched_keywords) + sentiment_score  # A basic score combining sentiment and keyword relevance
-#             ranked_listings.append({"listing_id": listing["id"], "score": score})
-
-#     # Sort listings by score (higher score = better match)
-#     ranked_listings = sorted(ranked_listings, key=lambda x: x["score"], reverse=True)
-#     # return ranked_listings[:5]  # Top 5 listings
-#     print(ranked_listings[:5]) 
-
+# Updated recommend_listings function to use Claude API
 @app.route('/recommend', methods=['GET'])
 def recommend_listings():
     # Get user preferences from query parameters
@@ -225,7 +321,7 @@ def recommend_listings():
     max_price = float(request.args.get("max_price", 1000))
     
     # Get keywords as a comma-separated list and convert to lowercase for case-insensitive matching
-    user_keywords_raw = request.args.get("keywords", "[\"clean\", \"quiet\", \"spacious\"]")
+    user_keywords_raw = request.args.get("keywords", "clean,quiet,spacious")
     user_keywords = [k.strip().lower() for k in user_keywords_raw.split(',') if k.strip()]
     
     # Get search parameters (same as in search_airbnb function)
@@ -301,16 +397,16 @@ def recommend_listings():
                         
                     review_count += 1
                     
-                    # Analyze sentiment
-                    sentiment = analyze_sentiment_with_groq(comment)
+                    # Analyze sentiment using Claude
+                    sentiment = analyze_sentiment_with_claude(comment)
                     # Add to sentiment score
                     if sentiment == "POSITIVE":
                         sentiment_score += 1
                     elif sentiment == "NEGATIVE":
                         sentiment_score -= 1
                     
-                    # Extract and match keywords
-                    keywords = extract_keywords_with_groq(comment)
+                    # Extract and match keywords using Claude
+                    keywords = extract_keywords_with_claude(comment)
                     # Convert to lowercase for case-insensitive matching
                     keywords_lower = [k.lower() for k in keywords]
                     

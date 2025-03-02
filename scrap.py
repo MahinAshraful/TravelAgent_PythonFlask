@@ -143,5 +143,28 @@
 #     ranked_listings = sorted(ranked_listings, key=lambda x: x["score"], reverse=True)
 #     return ranked_listings[:5]  # Top 5 listings
 
+
+
+# def rank_listings(listings, reviews, user_keywords):
+#     ranked_listings = []
+
+#     for listing in listings:
+#         review = reviews.get(listing["id"])  # Get reviews for the listing
+#         if review:
+#             sentiment = analyze_sentiment_with_groq(review)
+#             keywords = extract_keywords_with_groq(review)
+
+#             sentiment_score = 1 if sentiment == "positive" else -1 if sentiment == "negative" else 0
+#             # Compare keywords with user preferences (user_keywords is a list of keywords they care about)
+#             matched_keywords = [kw for kw in keywords if kw in user_keywords]
+#             score = len(matched_keywords) + sentiment_score  # A basic score combining sentiment and keyword relevance
+#             ranked_listings.append({"listing_id": listing["id"], "score": score})
+
+#     # Sort listings by score (higher score = better match)
+#     ranked_listings = sorted(ranked_listings, key=lambda x: x["score"], reverse=True)
+#     # return ranked_listings[:5]  # Top 5 listings
+#     print(ranked_listings[:5]) 
+
+
 # if __name__ == "__main__":
 #     app.run(debug=True, host="0.0.0.0", port=5001)
