@@ -1,4 +1,3 @@
-
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import pyairbnb
@@ -37,7 +36,15 @@ def search_airbnb():
     try:
         # Fetch Airbnb listings
         search_results = pyairbnb.search_all(
-            check_in, check_out, ne_lat, ne_long, sw_lat, sw_long, zoom_value, currency, ""
+            check_in,
+            check_out,
+            ne_lat,
+            ne_long,
+            sw_lat,
+            sw_long,
+            zoom_value,
+            currency,
+            "",
         )
 
         listings_with_images = []
@@ -57,15 +64,17 @@ def search_airbnb():
             price_details = listing.get("price", {}).get("total", {})
 
             # Add listing with images & price breakdown to the result
-            listings_with_images.append({
-                "id": listing.get("room_id"),
-                "name": listing.get("name"),
-                "url": f"https://www.airbnb.com/rooms/{listing.get('room_id')}",
-                "rating": listing.get("rating", {}).get("value", None),
-                "price": price_details.get("amount", None),
-                "room_type": listing.get("category"),
-                "image_urls": image_urls
-            })
+            listings_with_images.append(
+                {
+                    "id": listing.get("room_id"),
+                    "name": listing.get("name"),
+                    "url": f"https://www.airbnb.com/rooms/{listing.get('room_id')}",
+                    "rating": listing.get("rating", {}).get("value", None),
+                    "price": price_details.get("amount", None),
+                    "room_type": listing.get("category"),
+                    "image_urls": image_urls,
+                }
+            )
 
         return jsonify(listings_with_images)
 
@@ -73,10 +82,11 @@ def search_airbnb():
         return jsonify({"error": str(e)}), 500
 
 
-#AI STUFF
+# AI STUFF
 # Claude API Implementation
 import requests
 import json
+
 # Fixed Claude API implementation with accurate request format
 import os
 import requests
@@ -91,20 +101,21 @@ load_dotenv()
 CLAUDE_API_KEY = os.getenv("API_KEY")
 
 # Claude API configuration - Note the updated URL and headers
-CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages'
+CLAUDE_API_URL = "https://api.anthropic.com/v1/messages"
+
 
 def analyze_sentiment_with_claude(review_text):
     if not CLAUDE_API_KEY:
         print("API Key is missing. Please check your .env file.")
         return "NEUTRAL"
-    
+
     # Updated headers to match the correct format for Claude API
     headers = {
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-        'x-api-key': CLAUDE_API_KEY
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+        "x-api-key": CLAUDE_API_KEY,
     }
-    
+
     # Corrected payload structure for Claude API
     payload = {
         "model": "claude-3-7-sonnet-20250219",
@@ -112,61 +123,62 @@ def analyze_sentiment_with_claude(review_text):
         "messages": [
             {
                 "role": "user",
-                "content": f"Analyze the sentiment of this Airbnb review. Respond with exactly one word - either POSITIVE, NEGATIVE, or NEUTRAL: \"{review_text}\""
+                "content": f'Analyze the sentiment of this Airbnb review. Respond with exactly one word - either POSITIVE, NEGATIVE, or NEUTRAL: "{review_text}"',
             }
         ],
-        "temperature": 0
+        "temperature": 0,
     }
-    
+
     try:
         # Print request details for debugging
         print(f"Sending request to Claude API with headers: {headers.keys()}")
         print(f"Payload: {payload}")
-        
+
         response = requests.post(CLAUDE_API_URL, headers=headers, json=payload)
-        
+
         # Print response for debugging
         print(f"Response status: {response.status_code}")
         print(f"Response text: {response.text[:200]}")
-        
+
         if response.status_code != 200:
             print(f"Error response: {response.text}")
             return "NEUTRAL"
-            
+
         result = response.json()
         print(f"JSON response keys: {result.keys()}")
-        
+
         # Extract the content from the response
-        if 'content' in result and len(result['content']) > 0:
-            sentiment = result['content'][0].get('text', '').strip().upper()
-            
+        if "content" in result and len(result["content"]) > 0:
+            sentiment = result["content"][0].get("text", "").strip().upper()
+
             # Normalize the response
-            if 'POSITIVE' in sentiment:
-                return 'POSITIVE'
-            elif 'NEGATIVE' in sentiment:
-                return 'NEGATIVE'
+            if "POSITIVE" in sentiment:
+                return "POSITIVE"
+            elif "NEGATIVE" in sentiment:
+                return "NEGATIVE"
             else:
-                return 'NEUTRAL'
+                return "NEUTRAL"
         else:
             print("No content found in response")
-            return 'NEUTRAL'
-            
+            return "NEUTRAL"
+
     except Exception as e:
         print(f"Error in Claude sentiment analysis: {str(e)}")
-        return 'NEUTRAL'  # Default to neutral if there's an error
+        return "NEUTRAL"  # Default to neutral if there's an error
+
 
 def extract_keywords_with_claude(review_text):
     if not CLAUDE_API_KEY:
         print("API Key is missing. Please check your .env file.")
         return []
-    
+
     # Updated headers for Claude API
     headers = {
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-        'x-api-key': CLAUDE_API_KEY
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+        "x-api-key": CLAUDE_API_KEY,
     }
-    
+
     # Corrected payload for Claude API
     payload = {
         "model": "claude-3-7-sonnet-20250219",
@@ -174,80 +186,81 @@ def extract_keywords_with_claude(review_text):
         "messages": [
             {
                 "role": "user",
-                "content": f"Extract 3-5 keywords from this Airbnb review about the location, amenities, or experience. Return ONLY the keywords separated by commas with no other text or explanation: \"{review_text}\""
+                "content": f'Extract 3-5 keywords from this Airbnb review about the location, amenities, or experience. Return ONLY the keywords separated by commas with no other text or explanation: "{review_text}"',
             }
         ],
-        "temperature": 0
+        "temperature": 0,
     }
-    
+
     try:
         response = requests.post(CLAUDE_API_URL, headers=headers, json=payload)
-        
+
         if response.status_code != 200:
-            print(f"Error in keyword extraction: {response.status_code} - {response.text}")
+            print(
+                f"Error in keyword extraction: {response.status_code} - {response.text}"
+            )
             return []
-            
+
         result = response.json()
-        
+
         # Extract content from response
-        if 'content' in result and len(result['content']) > 0:
-            keywords_text = result['content'][0].get('text', '').strip()
-            
+        if "content" in result and len(result["content"]) > 0:
+            keywords_text = result["content"][0].get("text", "").strip()
+
             # Clean up and split the keywords
-            keywords = [kw.strip() for kw in keywords_text.split(',') if kw.strip()]
+            keywords = [kw.strip() for kw in keywords_text.split(",") if kw.strip()]
             return keywords
         else:
             print("No content found in response")
             return []
-            
+
     except Exception as e:
         print(f"Error in Claude keyword extraction: {str(e)}")
         return []  # Return empty list on error
 
 
-
 # Updated version with better debugging
-@app.route('/reviews', methods=['GET'])
+@app.route("/reviews", methods=["GET"])
 def get_reviews():
     # Get listing URL and proxy URL
-    room_url = request.args.get("room_url", "https://www.airbnb.com/rooms/1244159884004281532")
+    room_url = request.args.get(
+        "room_url", "https://www.airbnb.com/rooms/1244159884004281532"
+    )
     proxy_url = request.args.get("proxy_url", "")
 
     try:
         reviews_data = pyairbnb.get_reviews(room_url, proxy_url)
-        
+
         # Limit to first 5 reviews to avoid overloading the API
         reviews_to_process = reviews_data[:5] if len(reviews_data) > 5 else reviews_data
-        
+
         results = []
         for review in reviews_to_process:
             comment = review.get("comments", "")
             if comment:
                 # Add debugging
                 print(f"Processing review: {comment[:50]}...")
-                
+
                 try:
                     sentiment = analyze_sentiment_with_claude(comment)
                     print(f"Sentiment result: {sentiment}")
                 except Exception as e:
                     print(f"Sentiment analysis failed: {str(e)}")
                     sentiment = "NEUTRAL"
-                
+
                 try:
                     keywords = extract_keywords_with_claude(comment)
                     print(f"Keywords result: {keywords}")
                 except Exception as e:
                     print(f"Keyword extraction failed: {str(e)}")
                     keywords = []
-                
-                results.append({
-                    "comment": comment,
-                    "sentiment": sentiment,
-                    "keywords": keywords
-                })
+
+                results.append(
+                    {"comment": comment, "sentiment": sentiment, "keywords": keywords}
+                )
 
         return jsonify(results)
-    
+
     except Exception as e:
         print(f"Error in get_reviews: {str(e)}")
         return jsonify({"error": str(e)}), 500
@@ -257,7 +270,7 @@ def get_reviews():
 # @app.route('/test-claude-api', methods=['GET'])
 # def test_claude_api():
 #     test_review = "The location was perfect, close to the beach and restaurants. The apartment was clean and the host was very friendly and responsive."
-    
+
 #     try:
 #         # Test API key
 #         if not CLAUDE_API_KEY:
@@ -265,14 +278,14 @@ def get_reviews():
 #                 "error": "API key not found",
 #                 "help": "Make sure you have an .env file with API_KEY set correctly"
 #             }), 400
-            
+
 #         # Test API directly with minimal request
 #         headers = {
 #             'anthropic-version': '2023-06-01',
 #             'content-type': 'application/json',
 #             'x-api-key': CLAUDE_API_KEY
 #         }
-        
+
 #         simple_payload = {
 #             "model": "claude-3-7-sonnet-20250219",
 #             "max_tokens": 10,
@@ -283,20 +296,20 @@ def get_reviews():
 #                 }
 #             ]
 #         }
-        
+
 #         test_response = requests.post(CLAUDE_API_URL, headers=headers, json=simple_payload)
-        
+
 #         if test_response.status_code != 200:
 #             return jsonify({
 #                 "error": f"API test failed with status {test_response.status_code}",
 #                 "details": test_response.text,
 #                 "api_key_format": f"{CLAUDE_API_KEY[:5]}...{CLAUDE_API_KEY[-5:]}" if CLAUDE_API_KEY else None
 #             }), 400
-            
+
 #         # Test sentiment and keywords
 #         sentiment = analyze_sentiment_with_claude(test_review)
 #         keywords = extract_keywords_with_claude(test_review)
-        
+
 #         return jsonify({
 #             "status": "success",
 #             "test_review": test_review,
@@ -305,42 +318,53 @@ def get_reviews():
 #             "api_key_loaded": bool(CLAUDE_API_KEY),
 #             "api_key_format": f"{CLAUDE_API_KEY[:5]}...{CLAUDE_API_KEY[-5:]}" if CLAUDE_API_KEY else None
 #         })
-        
+
 #     except Exception as e:
 #         return jsonify({
 #             "error": str(e),
 #             "trace": traceback.format_exc()
 #         }), 500
 
+
 # Updated recommend_listings function to use Claude API
-@app.route('/recommend', methods=['GET'])
+@app.route("/recommend", methods=["GET"])
 def recommend_listings():
     # Get user preferences from query parameters
     min_price = float(request.args.get("min_price", 0))
     max_price = float(request.args.get("max_price", 1000))
-    
+
     # Get keywords as a comma-separated list and convert to lowercase for case-insensitive matching
     user_keywords_raw = request.args.get("keywords", "clean,quiet,spacious")
-    user_keywords = [k.strip().lower() for k in user_keywords_raw.split(',') if k.strip()]
-    
+    user_keywords = [
+        k.strip().lower() for k in user_keywords_raw.split(",") if k.strip()
+    ]
+
     # Get search parameters (same as in search_airbnb function)
     check_in = request.args.get("check_in", "2025-06-01")
     check_out = request.args.get("check_out", "2025-06-04")
     currency = request.args.get("currency", "USD")
-    
+
     # Location parameters (default to New York)
     ne_lat = float(request.args.get("ne_lat", 40.7808))
     ne_long = float(request.args.get("ne_long", -73.9653))
     sw_lat = float(request.args.get("sw_lat", 40.7308))
     sw_long = float(request.args.get("sw_long", -74.0005))
     zoom_value = int(request.args.get("zoom", 2))
-    
+
     try:
         # Fetch Airbnb listings (reusing code from search_airbnb)
         search_results = pyairbnb.search_all(
-            check_in, check_out, ne_lat, ne_long, sw_lat, sw_long, zoom_value, currency, ""
+            check_in,
+            check_out,
+            ne_lat,
+            ne_long,
+            sw_lat,
+            sw_long,
+            zoom_value,
+            currency,
+            "",
         )
-        
+
         # Filter by price range first
         filtered_listings = []
         for listing in search_results:
@@ -348,13 +372,13 @@ def recommend_listings():
             price = listing.get("price", {}).get("total", {}).get("amount", 0)
             if price is None:
                 continue
-                
+
             price = float(price)
-            
+
             # Skip listings outside the price range
             if price < min_price or price > max_price:
                 continue
-                
+
             # Basic listing info
             listing_info = {
                 "id": listing.get("room_id"),
@@ -363,39 +387,43 @@ def recommend_listings():
                 "rating": listing.get("rating", {}).get("value", None),
                 "price": price,
                 "room_type": listing.get("category"),
-                "image_urls": [image["url"] for image in listing.get("images", [])]
+                "image_urls": [image["url"] for image in listing.get("images", [])],
             }
-            
+
             filtered_listings.append(listing_info)
-        
+
         # List to store ranking results
         ranked_listings = []
-        
+
         # Process up to 10 listings to avoid overloading
-        listings_to_process = filtered_listings[:10] if len(filtered_listings) > 10 else filtered_listings
-        
+        listings_to_process = (
+            filtered_listings[:10] if len(filtered_listings) > 10 else filtered_listings
+        )
+
         # Score and rank each listing
         for listing in listings_to_process:
             try:
                 # Get reviews for this listing
                 room_url = f"https://www.airbnb.com/rooms/{listing['id']}"
                 reviews_data = pyairbnb.get_reviews(room_url, "")
-                
+
                 # Process only first 3 reviews for efficiency
-                reviews_to_process = reviews_data[:3] if len(reviews_data) > 3 else reviews_data
-                
+                reviews_to_process = (
+                    reviews_data[:3] if len(reviews_data) > 3 else reviews_data
+                )
+
                 # Score this listing based on reviews
                 sentiment_score = 0
                 keyword_matches = 0
                 review_count = 0
-                
+
                 for review in reviews_to_process:
                     comment = review.get("comments", "")
                     if not comment:
                         continue
-                        
+
                     review_count += 1
-                    
+
                     # Analyze sentiment using Claude
                     sentiment = analyze_sentiment_with_claude(comment)
                     # Add to sentiment score
@@ -403,19 +431,19 @@ def recommend_listings():
                         sentiment_score += 1
                     elif sentiment == "NEGATIVE":
                         sentiment_score -= 1
-                    
+
                     # Extract and match keywords using Claude
                     keywords = extract_keywords_with_claude(comment)
                     # Convert to lowercase for case-insensitive matching
                     keywords_lower = [k.lower() for k in keywords]
-                    
+
                     # Count matches with user keywords
                     for user_keyword in user_keywords:
                         for keyword in keywords_lower:
                             if user_keyword in keyword or keyword in user_keyword:
                                 keyword_matches += 1
                                 break
-                
+
                 # Calculate final score
                 # If no reviews, give a neutral base score
                 if review_count == 0:
@@ -423,64 +451,125 @@ def recommend_listings():
                 else:
                     # Normalize sentiment score to range of -1 to 1
                     normalized_sentiment = sentiment_score / review_count
-                    
+
                     # Give more weight to keyword matches (multiply by 2)
                     final_score = (normalized_sentiment * 5) + (keyword_matches * 10)
-                
+
                 # Add to ranked listings
-                ranked_listings.append({
-                    "listing": listing,
-                    "score": final_score,
-                    "sentiment_score": sentiment_score,
-                    "keyword_matches": keyword_matches,
-                    "review_count": review_count
-                })
-                
+                ranked_listings.append(
+                    {
+                        "listing": listing,
+                        "score": final_score,
+                        "sentiment_score": sentiment_score,
+                        "keyword_matches": keyword_matches,
+                        "review_count": review_count,
+                    }
+                )
+
             except Exception as e:
                 print(f"Error processing listing {listing['id']}: {str(e)}")
                 # Still add the listing but with a low score
-                ranked_listings.append({
-                    "listing": listing,
-                    "score": -100,  # Give a very low score to listings with errors
-                    "error": str(e)
-                })
-        
+                ranked_listings.append(
+                    {
+                        "listing": listing,
+                        "score": -100,  # Give a very low score to listings with errors
+                        "error": str(e),
+                    }
+                )
+
         # Sort by score (highest first)
-        ranked_listings = sorted(ranked_listings, key=lambda x: x["score"], reverse=True)
-        
+        ranked_listings = sorted(
+            ranked_listings, key=lambda x: x["score"], reverse=True
+        )
+
         # Return top 3 listings with their scores
-        top_listings = ranked_listings[:3] if len(ranked_listings) >= 3 else ranked_listings
-        
+        top_listings = (
+            ranked_listings[:3] if len(ranked_listings) >= 3 else ranked_listings
+        )
+
         # Format the response
         response = []
         for item in top_listings:
             listing_data = item["listing"]
-            response.append({
-                "id": listing_data["id"],
-                "name": listing_data["name"],
-                "url": listing_data["url"],
-                "price": listing_data["price"],
-                "rating": listing_data["rating"],
-                "image_urls": listing_data["image_urls"][:1],  # Just the first image to keep response smaller
-                "score": item["score"],
-                "match_reasons": {
-                    "sentiment_score": item.get("sentiment_score", 0),
-                    "keyword_matches": item.get("keyword_matches", 0)
+            response.append(
+                {
+                    "id": listing_data["id"],
+                    "name": listing_data["name"],
+                    "url": listing_data["url"],
+                    "price": listing_data["price"],
+                    "rating": listing_data["rating"],
+                    "image_urls": listing_data["image_urls"][
+                        :1
+                    ],  # Just the first image to keep response smaller
+                    "score": item["score"],
+                    "match_reasons": {
+                        "sentiment_score": item.get("sentiment_score", 0),
+                        "keyword_matches": item.get("keyword_matches", 0),
+                    },
                 }
-            })
-        
-        return jsonify({
-            "results": response,
-            "user_preferences": {
-                "price_range": {"min": min_price, "max": max_price},
-                "keywords": user_keywords
+            )
+
+        return jsonify(
+            {
+                "results": response,
+                "user_preferences": {
+                    "price_range": {"min": min_price, "max": max_price},
+                    "keywords": user_keywords,
+                },
             }
-        })
-        
+        )
+
     except Exception as e:
         print(f"Error in recommend_listings: {str(e)}")
         return jsonify({"error": str(e)}), 500
-    
+
+
+from travel import scrape_momondo
+
+
+@app.route("/api/search_flights", methods=["POST"])
+def search_flights():
+    data = request.json
+
+    # Extract parameters from request
+    try:
+        leaving_airport = data.get("leaving_airport")
+        destination_airport = data.get("destination_airport")
+        departure_date = data.get("departure_date")
+        return_date = data.get("return_date")
+        num_adults = int(data.get("num_adults", 1))
+        num_seniors = int(data.get("num_seniors", 0))
+        num_students = int(data.get("num_students", 0))
+        children_ages = data.get("children_ages", [])
+        infants_on_seat = int(data.get("infants_on_seat", 0))
+        infants_on_lap = int(data.get("infants_on_lap", 0))
+
+        # Validate required fields
+        if not all([leaving_airport, destination_airport, departure_date, return_date]):
+            return jsonify({"error": "Missing required fields"}), 400
+
+        # Call the scraper function
+        result = scrape_momondo(
+            leaving_airport=leaving_airport,
+            destination_airport=destination_airport,
+            departure_date=departure_date,
+            return_date=return_date,
+            num_adults=num_adults,
+            num_seniors=num_seniors,
+            num_students=num_students,
+            children_ages=children_ages,
+            infants_on_seat=infants_on_seat,
+            infants_on_lap=infants_on_lap,
+        )
+
+        if result:
+            return jsonify({"success": True, "booking_url": result})
+        else:
+            return jsonify({"success": False, "message": "No booking links found"}), 404
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5001)
