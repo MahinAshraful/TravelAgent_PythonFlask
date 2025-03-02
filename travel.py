@@ -1,14 +1,14 @@
 from playwright.sync_api import sync_playwright
 import time
 
-def scrape_momondo(leaving_airport, destination_airport, departure_date, return_date):
+def scrape_momondo(leaving_airport, destination_airport, departure_date, return_date, num_adults):
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False)  # Set to True during production
         page = browser.new_page()
         
         # Navigate to initial page
 
-        url = f"https://www.momondo.com/flight-search/{leaving_airport}-{destination_airport}/{departure_date}/{return_date}?ucs=ffm4n7&sort=bestflight_a"
+        url = f"https://www.momondo.com/flight-search/{leaving_airport}-{destination_airport}/{departure_date}/{return_date}/{num_adults}adults?ucs=ffm4n7&sort=bestflight_a"
 
         print(f"Navigating to: {url}")
         page.goto(url)
@@ -51,7 +51,7 @@ def scrape_momondo(leaving_airport, destination_airport, departure_date, return_
         return href
 
 #test for JFK to DUB on 2025-04-17 to 2025-05-06
-link = scrape_momondo("JFK", "DUB", "2025-04-17", "2025-05-06")
+link = scrape_momondo("JFK", "DUB", "2025-04-17", "2025-05-06", 1)
 link = "https://momondo.com" + link
 
 print('here is the link')
