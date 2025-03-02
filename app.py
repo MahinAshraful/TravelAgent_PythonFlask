@@ -60,6 +60,7 @@ def search_airbnb():
                 "name": listing.get("name"),
                 "url": f"https://www.airbnb.com/rooms/{listing.get('room_id')}",
                 "rating": listing.get("rating", {}).get("value", None),
+                "price": price_details.get("amount", None),
                 "room_type": listing.get("category"),
                 "image_urls": image_urls
             })
